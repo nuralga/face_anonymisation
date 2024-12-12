@@ -52,15 +52,30 @@ def process_video(video_file):
                 frame_number += 1
                 continue
 
+            # Use shoulder landmarks to define a valid head region
+            left_shoulder = results_pose.pose_landmarks.landmark[mp_pose.PoseLandmark.LEFT_SHOULDER]
+            right_shoulder = results_pose.pose_landmarks.landmark[mp_pose.PoseLandmark.RIGHT_SHOULDER]
+
+            if left_shoulder.visibility < 0.5 or right_shoulder.visibility < 0.5:
+                print(f"Shoulders not detected clearly in frame {frame_number}. Skipping frame.")
+                no_pose_path = os.path.join(no_pose_folder, frame_name)
+                cv2.imwrite(no_pose_path, frame)
+                frame_number += 1
+                continue
+
+            shoulder_y = int((left_shoulder.y + right_shoulder.y) / 2 * frame.shape[0])
+
             # Check for face presence using cascade detector
             faces = cascade_detector.detectMultiScale(gray_frame, scaleFactor=1.1, minNeighbors=5, minSize=(30, 30))
+
+            # Filter faces below the shoulders
+            faces = [f for f in faces if f[1] + f[3] // 2 < shoulder_y]
 
             # If no faces detected by cascade, use dlib to detect a single face
             if len(faces) == 0:
                 dlib_faces = dlib_detector(gray_frame)
-                if len(dlib_faces) > 0:
-                    face = dlib_faces[0]  # Only process the first detected face
-                    faces = [(face.left(), face.top(), face.width(), face.height())]
+                faces = [(face.left(), face.top(), face.width(), face.height()) for face in dlib_faces]
+                faces = [f for f in faces if f[1] + f[3] // 2 < shoulder_y]
 
             # If pose exists but no face detected
             if len(faces) == 0:
