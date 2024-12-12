@@ -55,10 +55,12 @@ def process_video(video_file):
             # Check for face presence using cascade detector
             faces = cascade_detector.detectMultiScale(gray_frame, scaleFactor=1.1, minNeighbors=5, minSize=(30, 30))
 
-            # If no faces detected by cascade, use dlib
+            # If no faces detected by cascade, use dlib to detect a single face
             if len(faces) == 0:
                 dlib_faces = dlib_detector(gray_frame)
-                faces = [(face.left(), face.top(), face.width(), face.height()) for face in dlib_faces]
+                if len(dlib_faces) > 0:
+                    face = dlib_faces[0]  # Only process the first detected face
+                    faces = [(face.left(), face.top(), face.width(), face.height())]
 
             # If pose exists but no face detected
             if len(faces) == 0:
@@ -69,25 +71,27 @@ def process_video(video_file):
                 frame_number += 1
                 continue
 
-            for (x1, y1, w, h) in faces:
-                x2, y2 = x1 + w, y1 + h
-                if x1 < 0 or y1 < 0 or x2 > frame.shape[1] or y2 > frame.shape[0]:
-                    print(f"Error: Invalid face bounding box in frame {frame_number}.")
-                    continue
+            # Process the single detected face
+            x1, y1, w, h = faces[0]
+            x2, y2 = x1 + w, y1 + h
+            if x1 < 0 or y1 < 0 or x2 > frame.shape[1] or y2 > frame.shape[0]:
+                print(f"Error: Invalid face bounding box in frame {frame_number}.")
+                frame_number += 1
+                continue
 
-                face_roi = rgb_frame[y1:y2, x1:x2]
-                results_face = face_mesh.process(face_roi)
+            face_roi = rgb_frame[y1:y2, x1:x2]
+            results_face = face_mesh.process(face_roi)
 
-                if results_face.multi_face_landmarks:
-                    for face_landmarks in results_face.multi_face_landmarks:
-                        key_points = []
-                        for landmark in face_landmarks.landmark:
-                            x = int(landmark.x * (x2 - x1)) + x1
-                            y = int(landmark.y * (y2 - y1)) + y1
-                            key_points.extend([x, y])
-                            cv2.circle(frame, (x, y), 1, (0, 255, 0), -1)
+            if results_face.multi_face_landmarks:
+                for face_landmarks in results_face.multi_face_landmarks:
+                    key_points = []
+                    for landmark in face_landmarks.landmark:
+                        x = int(landmark.x * (x2 - x1)) + x1
+                        y = int(landmark.y * (y2 - y1)) + y1
+                        key_points.extend([x, y])
+                        cv2.circle(frame, (x, y), 1, (0, 255, 0), -1)
 
-                        writer.writerow([frame_name] + key_points)
+                    writer.writerow([frame_name] + key_points)
 
             marked_image_path = os.path.join(marked_images_folder, frame_name)
             cv2.imwrite(marked_image_path, frame)
