@@ -4,7 +4,7 @@ Tools to blur faces in video for privacy-safe datasets. Blurring is automatic, u
 
 ## How it works
 
-1. **Automatic blurring** (`task_01_06.py`): MediaPipe detects the face, the bounding box is expanded, and Face Mesh landmarks inside it give a convex-hull mask of the face. A strong Gaussian blur is applied inside the mask only. Each frame is logged to `log.csv`, with `face_detected = -1` when no face was found.
+1. **Automatic blurring** (`blur_faces.py`): MediaPipe detects the face, the bounding box is expanded, and Face Mesh landmarks inside it give a convex-hull mask of the face. A strong Gaussian blur is applied inside the mask only. Each frame is logged to `log.csv`, with `face_detected = -1` when no face was found.
 2. **Manual review** (`manual_bluring.py`): opens only the frames that `log.csv` marks as missed. You paint blur with the mouse, and the tool saves the fixed frames plus a log of every blurred region.
 3. **Key-point extraction** (`key_points.py`, `key_points_from_video.py`): a dlib face detector feeds MediaPipe Face Mesh, which exports 468 landmarks per frame to CSV and saves annotated frames. The video version also uses MediaPipe Pose to skip frames with no person.
 
@@ -14,7 +14,7 @@ Tools to blur faces in video for privacy-safe datasets. Blurring is automatic, u
 pip install opencv-python mediapipe dlib numpy pandas
 
 # 1. Blur faces automatically; save frames + MP4
-python task_01_06.py input.mp4 out_dir --save_frames --save_mp4
+python blur_faces.py input.mp4 out_dir --save_frames --save_mp4
 
 # 2. Fix frames where no face was detected
 python manual_bluring.py --folder out_dir --output_folder fixed
